@@ -5,13 +5,15 @@ set +H
 
 ### Implement the acloud.guru EC2 101 Lab steps as CF and bash.
 
+stackName="acloud-guru-ec2-101"
+
 # Get the current external IP address and create a CIDR
 myIp=$(dig +short myip.opendns.com @resolver1.opendns.com)
 myCidr="$myIp/32"
 
 # Create a key pair
-mkdir -p ~/.ssh
 keyName='EC2.101'
+mkdir -p ~/.ssh
 aws ec2 create-key-pair --key-name $keyName | jq -r ".KeyMaterial" > ~/.ssh/$keyName.pem
 chmod 400 ~/.ssh/$keyName.pem
 
@@ -152,8 +154,8 @@ curl $instancePublicIp
 ## Cleanup
 
 # Delete the stack
-aws cloudformation delete-stack --stack-name "acloud-guru-ec2-101"
+aws cloudformation delete-stack --stack-name $stackName
 
 # Delete key pair
 aws ec2 delete-key-pair --key-name $keyName
-rm ~/.ssh/$keyName.pem
+rm ~/.ssh/$keyName.pem -f
