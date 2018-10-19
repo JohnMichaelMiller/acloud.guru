@@ -1,0 +1,124 @@
+---
+### AWS CloudFormation template for the RDS multi-AZ, data
+### encryption, and read replica labs from the acloud.guru
+### AWS Certified Develper Associate course 
+AWSTemplateFormatVersion: 2010-09-09
+Description: acloud.guru RDS Multi-AZ and Read Replica Lab
+Parameters:      # Default values for template parameters are useful when testing templates in the AWS Web Console
+  dbInstanceType:
+    Type: String
+    Default: db.t2.small
+  keyAdminArn:
+    Description: >-
+      ARN of the key administrator
+    Type: String
+    Default: arn:aws:iam::014959391663:user/jmiller # Intentionally incorrect
+Resources:
+  rdsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${AWS::StackName}-acg-rds-key
+      TargetKeyId: !Ref rdsKey
+  rdsKey:
+    Properties:
+      Description: Created by the data encryption portion of the RDS multi-AZ and read replica labs
+      Enabled: true
+      EnableKeyRotation: false
+      KeyPolicy: 
+        Version: "2012-10-17"
+        Id: "acg-key-default-1"
+        Statement: 
+          - 
+            Sid: "Allow administration of the key"
+            Effect: "Allow"
+            Principal: 
+              AWS:
+              - !Ref keyAdminArn
+              - !Sub arn:aws:iam::${AWS::AccountId}:root 
+            Action: 
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: "*"
+          - 
+            Sid: "Allow use of the key"
+            Effect: "Allow"
+            Principal: 
+              AWS:
+              - !Ref keyAdminArn
+              - !Sub arn:aws:iam::${AWS::AccountId}:root 
+            Action: 
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+      Tags:
+        - Key: Name
+          Value: rdsInstance
+        - Key: Lab
+          Value: acloud.guru.rds.multi-az
+    Type: AWS::KMS::Key
+  rdsInstance:
+    Properties:
+      AllocatedStorage: '20'
+      AutoMinorVersionUpgrade: true
+      CopyTagsToSnapshot: true
+      DBInstanceClass: !Ref dbInstanceType
+      DBInstanceIdentifier: 
+        !Sub ${AWS::StackName}-acg-rds-instance
+      DBName: acloudguru_db
+      Engine: mysql 
+      MasterUsername: acloudguru
+      MasterUserPassword: acloudguru # Obviously a bad idea. The parameter store is a better idea.
+      KmsKeyId: !Ref rdsKey # Encryption key
+      MultiAZ: true # Highly available
+      Port: '3306'
+      StorageEncrypted: true # Encrypt the data
+      Tags:
+        - Key: Name
+          Value: rdsInstance
+        - Key: Lab
+          Value: acloud.guru.rds.multi-az
+    Type: AWS::RDS::DBInstance
+  rdsReadReplicaInstance:
+    Properties:
+      DBInstanceClass: !Ref dbInstanceType
+      AllocatedStorage: '20'
+      CopyTagsToSnapshot: true
+      DBInstanceIdentifier: 
+        !Sub ${AWS::StackName}-acg-read-replica-rds-instance
+      SourceDBInstanceIdentifier: !Ref rdsInstance
+    Type: AWS::RDS::DBInstance
+    
+# MIT License
+
+# Copyright (c) 2018 John Michael Miller
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.

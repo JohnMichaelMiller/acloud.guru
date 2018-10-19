@@ -1,17 +1,18 @@
 #!/bin/bash 
 
+### AWS CLI code to deploy the CloudFormation template for the
+### Application Load Balancer lab from the acloud.guru AWS 
+### Certified Develper Associate course
+
 # turn off history expansion
 set +H
 
+# Go home
+region="us-east-1"
+aws configure set default.region $region
+
 # Change to an existing bucket in the account
 bucketName="acg.alb.cf"
-
-### Implement the acloud.guru Load Balancer Lab steps as bash using CloudFormation.
-# This script is not idempotent. It assume that none of these resources exists in the default vpc. It does try and clean up after itself.
-# It is also not intended to be run as a command. The intent is to run each section or snippet in conjunction with the appropriate section of the
-# lab. However, it should run attended but this hasn't been tested.
-# This script assumes that none of the requisite AWS resources exist. To use existing resources assign the AWS resources identifiers to the appropriate vars
-
 stackName="acg-alb"
 
 region="us-east-1"
@@ -21,7 +22,7 @@ aws configure set default.region $region
 
 # Get the current external IP address and create a CIDR
 myIp=$(dig +short myip.opendns.com @resolver1.opendns.com)
-myCidr="$myIp/32"
+myCidr="$myIp/28"
 allCidr="0.0.0.0/0"
 
 # Create a key pair
@@ -129,10 +130,11 @@ Outputs:
     Value: !GetAtt MyALB.LoadBalancerName
 Parameters: 
   externalCidr: 
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Type: String
   imageId: 
     Description: "choose a valid ami for the instance type being deployed in your region"
-    Type: String
+    Type: AWS::EC2::Image::Id
   instanceName: 
     ConstraintDescription: "must be a unique instance name."
     Description: "Name of the EC2 instance"
@@ -145,7 +147,7 @@ Parameters:
     Type: "AWS::EC2::KeyPair::KeyName"
   vpcId: 
     Description: "The id of the VPC to deploy into"
-    Type: String
+    Type: AWS::EC2::VPC::Id
   firstSubnet:
     Description: "A subnet in the VPC"
     Type: String
@@ -386,3 +388,35 @@ aws cloudformation delete-stack --stack-name $stackName
 # Delete key pair
 aws ec2 delete-key-pair --key-name $keyName
 rm ~/.ssh/$keyName.pem
+
+# Disclaimer: This script is not idempotent. It assumes that none
+# of these resources exists in the default vpc. It does try and
+# clean up after itself. It is also not intended to be run as a
+# command. The intent is to run each section or snippet in
+# conjunction with the appropriate section of the lab. However,
+# it should run attended but this hasn't been tested. This script
+# assumes that none of the requisite AWS resources exist. To use
+# existing resources assign the AWS resources identifiers to the
+# appropriate vars and comment out the related code.
+
+# MIT License
+
+# Copyright (c) 2018 John Michael Miller
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.

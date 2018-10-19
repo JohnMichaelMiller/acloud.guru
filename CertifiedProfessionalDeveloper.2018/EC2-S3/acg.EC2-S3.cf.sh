@@ -1,16 +1,14 @@
 #!/bin/bash 
 
-### Implement the acloud.guru EC2 with S3 Lab steps as bash.
-
-# This script is not idempotent. It assume that none of these resources exists in the default vpc. It does try and clean up after itself.
-# It is also not intended to be run as a command. The intent is to run each section or snippet in conjunction with the appropriate section of the
-# lab. However, it should run attended but this hasn't been tested.
-# This script assumes that none of the requisite AWS resources exist. To use existing resources assign the AWS resources identifiers to the appropriate vars
+ ### AWS CLI code and Cloudformation template for the EC2 with S3
+### lab from the acloud.guru AWS Certified Develper Associate course 
 
 # turn off history expansion
 set +H
 
-cleanup=${1:-0} # pass a 1 to run cleanup code only
+# Go home
+region="us-east-1"
+aws configure set default.region $region
 
 # Bucket names must be globally unique, change accordingly
 bucketName='acloudguru1234-jmm'
@@ -24,9 +22,7 @@ aws s3 ls s3://$bucketName
 EOF
 ) 
 
-if [[$cleanup -eq 0]]
-
-  # Create Stack
+# Create Stack
 stackName="acg-ec2-s3"
 
 region="us-east-1"
@@ -36,7 +32,7 @@ aws configure set default.region $region
 
 # Get the current external IP address and create a CIDR
 myIp=$(dig +short myip.opendns.com @resolver1.opendns.com)
-myCidr="$myIp/32"
+myCidr="$myIp/28"
 
 # Create a key pair
 keyName="acg-ec2-s3-$region"
@@ -92,10 +88,11 @@ Outputs:
 Parameters:      # Default values for template parameters are useful when testing templates in the AWS Web Console
   externalCidr:
     Type: String
-    Default: 68.5.90.175/32 # default value is intentially incorrect
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    Default: 68.5.90.175/28 # default value is intentially incorrect
   imageId:
     Description: choose a valid ami for the instance type being deployed in your region
-    Type: String
+    Type: AWS::EC2::Image::Id
     Default: ami-04681a1dbd79675a5 # may not be correct 
   instanceName:
     ConstraintDescription: must be a unique instance name.
@@ -113,7 +110,7 @@ Parameters:      # Default values for template parameters are useful when testin
     Default: acg-ec2-s3-us-east-1
   vpcId:
     Description: The id of the VPC to deploy into
-    Type: String
+    Type: AWS::EC2::VPC::Id
     Default: vpc-f3d7158a # intentionaly incorrect
   subNet:
     Description: An existing subnet in the VPC
@@ -346,16 +343,45 @@ echo $securityGroupId $instancePublicDns $instancePublicIp
     # SSH into EC2 Instance
 ssh -i "~/.ssh/$keyName.pem" "ec2-user@$instancePublicDNS"  "$testScript"
 
-else
+## Cleanup
 
-  ## Cleanup
+rm temp.cf.yaml
 
-  rm temp.cf.yaml
+# Delete the stack
+aws cloudformation delete-stack --stack-name $stackName
 
-  # Delete the stack
-  aws cloudformation delete-stack --stack-name $stackName
+# Delete key pair
+aws ec2 delete-key-pair --key-name $keyName
+rm ~/.ssh/$keyName.pem -f
 
-  # Delete key pair
-  aws ec2 delete-key-pair --key-name $keyName
-  rm ~/.ssh/$keyName.pem -f
-fi 
+# This code is not idempotent. It assumes that none of these
+# resources exists in the default vpc. It does try and clean up
+# after itself. It is also not intended to be run as a command.
+# The intent is to run each section or snippet in conjunction
+# with the appropriate section of the lab. However, it should
+# run attended but this hasn't been tested. This script assumes
+# that none of the requisite AWS resources exist. To use existing
+# resources assign the AWS resources identifiers to the appropriate
+# vars and comment out the related code.
+
+# MIT License
+
+# Copyright (c) 2018 John Michael Miller
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
